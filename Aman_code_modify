@@ -1,0 +1,64 @@
+from scipy.optimize import linear_sum_assignment
+import random
+from collections import defaultdict
+import numpy as np
+import time
+import pickle
+import csv
+import scipy as sp
+import pandas as pd
+
+
+def parseData(filename):
+    pairs = {}
+    with open(filename, newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=' ')
+        for row in reader:
+            left = row[0]
+            right = row[1]
+            pairs.setdefault(left, set()).add(right)
+    return pairs
+
+
+
+
+
+def parse_members(pairs):
+    # rows = []
+    # file = open('member-to-group-edges.csv')
+    # csvreader = csv.reader(file)
+    # for row in csvreader:
+    #     rows.append(row)
+    # rows = rows[1:]
+    # idx_map, i = {}, 0
+    # for source, dest, _ in rows:
+    #     if source not in idx_map:
+    #         idx_map[source] = i
+    #         i += 1
+    #     if dest not in idx_map:
+    #         idx_map[dest] = i
+    #         i += 1
+    n = 100#len(pairs)
+    matrix = [[0 for i in range(n)] \
+              for j in range(n)]
+
+    for key, value in enumerate(pairs):
+        # print( key)
+        # print(int(key))
+        # print(value)
+        matrix[int(key)][int(value)] = 1
+
+    return matrix
+
+def compute_maximum_matching(A):
+    start = time.time()
+    A = np.array(A)
+    row_ind, col_ind = linear_sum_assignment(A, maximize=True)
+    end = time.time()
+    print("Run Time: ", end - start, "seconds")
+    return A[row_ind, col_ind].sum()
+
+if __name__ == '__main__':
+    member2group = parseData("out.brunson_club-membership_club-membership.tsv")
+    members_matrix = parse_members(member2group)
+    print(compute_maximum_matching(members_matrix))
