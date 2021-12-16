@@ -2,6 +2,9 @@
 # maximal Bipartite matching.
 import datetime
 import csv
+import pickle
+from collections import defaultdict
+import pandas as pd
 
 class GFG:
     def __init__(self, graph):
@@ -61,16 +64,25 @@ class GFG:
         return result
 
 
-def parseData(filename):
+def parseData(filename, delimiter):
     pairs = {}
     with open(filename, newline='') as csvfile:
-        reader = csv.reader(csvfile, delimiter=' ')
+        reader = csv.reader(csvfile, delimiter=delimiter)
         for row in reader:
             left = row[0]
             right = row[1]
             pairs.setdefault(left, set()).add(right)
     return pairs
 
+def parse_data_csv(filename):
+    pairs = {}
+    with open(filename, newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            left = row[0]
+            right = row[1]
+            pairs.setdefault(left,set()).add(right)
+    return pairs
 
 def parse_members(pairs):
     n = len(pairs.keys())
@@ -85,11 +97,94 @@ def parse_members(pairs):
 
     return matrix
 
+def get_membership_dataset_graph():
+    dataset_pairs = parseData("../datasets/out.brunson_club-membership_club-membership.tsv", ' ')
+    return parse_members(dataset_pairs)
+
+
+def get_fifa_dataset_graph():
+    rows = []
+    file = open("../datasets/fifa_players.csv")
+    csvreader = csv.reader(file)
+    for row in csvreader:
+        rows.append(row)
+    rows = rows[1:]
+    country_idx_map, i = {}, 0
+    for source, dest, _ in rows:
+        if source not in country_idx_map:
+            country_idx_map[source] = i
+            i += 1
+        if dest not in country_idx_map:
+            country_idx_map[dest] = i
+            i += 1
+    num_countries = len(country_idx_map)
+    matrix = [[0 for i in range(num_countries)] \
+              for j in range(num_countries)]
+
+    for source, dest, _ in rows:
+        matrix[country_idx_map[source]][country_idx_map[dest]] = 1
+
+    return matrix
+
+
+def get_yelp_dataset_graph():
+    file_path = '../datasets/yelp_dataset_8000_users.pkl'
+    infile = open(file_path, 'rb')
+    df = pickle.load(infile)
+    G = defaultdict(dict)
+    infile.close()
+
+    user_id_map, review_id_map = {}, {}
+    unique_user_ids, unique_review_ids = df.user_id.unique(), df.review_id.unique()
+    for i, user_id in enumerate(unique_user_ids):
+        user_id_map[user_id] = i
+    for i, review_id in enumerate(unique_review_ids):
+        review_id_map[review_id] = i
+
+    for user_id, review_id in zip(df['user_id'], df['review_id']):
+        G[user_id][review_id] = 1
+
+    matrix = [[0 for j in range(len(unique_review_ids))] for i in range(len(unique_user_ids))]
+
+    for user_id in G:
+        for review_id in G[user_id].keys():
+            matrix[user_id_map[user_id]][review_id_map[review_id]] = 1
+
+    return matrix
+
+
+def get_members_dataset_graph():
+    rows = []
+    file = open('../datasets/member-to-group-edges.csv')
+    csvreader = csv.reader(file)
+    for row in csvreader:
+        rows.append(row)
+    rows = rows[1:]
+    idx_map, i = {}, 0
+    for source, dest, _ in rows:
+        if source not in idx_map:
+            idx_map[source] = i
+            i += 1
+        if dest not in idx_map:
+            idx_map[dest] = i
+            i += 1
+    n = len(idx_map)
+    matrix = [[0 for i in range(n)] \
+              for j in range(n)]
+
+    for source, dest, _ in rows:
+        matrix[idx_map[source]][idx_map[dest]] = 1
+
+    return matrix
+
+
 if __name__ == '__main__':
 
-    # First dataset
-    dataset_pairs = parseData("../datasets/out.brunson_club-membership_club-membership.tsv")
-    graph = parse_members(dataset_pairs)
+    # graph = get_membership_dataset_graph()
+    # graph = get_fifa_dataset_graph()
+    # graph = get_yelp_dataset_graph()
+    graph = get_members_dataset_graph()
+
     start = datetime.datetime.now()
     g = GFG(graph)
     end = datetime.datetime.now()
